@@ -1,26 +1,106 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-brand-bright-orange: #f79549;
+  --color-brand-coral: #ff7f50;
+  --color-brand-red: #ee2d46;
+  --color-brand-dark-gray: #414042;
+  --animate-blob: blob 7s infinite;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --keyframes-blob: {
+    "0%": {
+      transform: "translate(0px, 0px) scale(1)"
+    }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    ,
+    "33%": {
+      transform: "translate(30px, -50px) scale(1.1)"
+    }
+
+    ,
+    "66%": {
+      transform: "translate(-20px, 20px) scale(0.9)"
+    }
+
+    ,
+    "100%": {
+      transform: "translate(0px, 0px) scale(1)"
+    }
+
+    ,
   }
+
+  ;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+/* React Quill Custom Styles */
+.react-quill-custom-wrapper .ql-toolbar {
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+  border-color: #f3f4f6;
+  background-color: #f9fafb;
+  font-family: inherit;
+}
+.react-quill-custom-wrapper .ql-container {
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+  border-color: #f3f4f6;
+  min-height: 150px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  background-color: #f9fafb;
+}
+.react-quill-custom-wrapper .ql-editor {
+  min-height: 150px;
+}
+.react-quill-custom-wrapper .ql-container.ql-snow {
+  border-color: #e5e7eb;
+}
+.react-quill-custom-wrapper .ql-toolbar.ql-snow {
+  border-color: #e5e7eb;
+}
+
+
+/* Restore Tailwind Preflight resets for Quill Editor */
+.ql-editor p {
+  margin-bottom: 1em;
+}
+.ql-editor ul {
+  list-style-type: disc !important;
+  padding-left: 1.5em !important;
+  margin-bottom: 1em;
+}
+.ql-editor ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5em !important;
+  margin-bottom: 1em;
+}
+.ql-editor h1 {
+  font-size: 2em !important;
+  font-weight: bold !important;
+  margin-bottom: 0.5em;
+}
+.ql-editor h2 {
+  font-size: 1.5em !important;
+  font-weight: bold !important;
+  margin-bottom: 0.5em;
+}
+.ql-editor h3 {
+  font-size: 1.17em !important;
+  font-weight: bold !important;
+  margin-bottom: 0.5em;
+}
+.ql-editor strong {
+  font-weight: bold !important;
+}
+.ql-editor em {
+  font-style: italic !important;
+}
+
