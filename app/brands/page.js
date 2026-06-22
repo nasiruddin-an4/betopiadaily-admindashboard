@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../utils/api';
 import { Search, Plus, Edit2, Trash2, Star, X, Upload } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export default function BrandsPage() {
   const [brands, setBrands] = useState([]);
@@ -12,12 +13,12 @@ export default function BrandsPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', icon: null });
+  const [formData, setFormData] = useState({ name: '', icon: null });
   const fileInputRef = useRef(null);
 
   const handleAddClick = () => {
     setEditingBrand(null);
-    setFormData({ name: '', description: '', icon: null });
+    setFormData({ name: '', icon: null });
     setIsModalOpen(true);
   };
 
@@ -25,45 +26,90 @@ export default function BrandsPage() {
     setEditingBrand(brand);
     setFormData({ 
       name: brand.name || '', 
-      description: brand.slug || brand.description || '', 
       icon: brand.icon || null 
     });
     setIsModalOpen(true);
   };
 
-  const handleSaveBrand = async () => {
-    // Basic validation
-    if (!formData.name) return;
-
-    // API integration would go here:
-    // const payload = new FormData();
-    // payload.append('name', formData.name);
-    // if (formData.icon) payload.append('icon', formData.icon);
-    // await apiFetch('/brands/', { method: 'POST', body: payload });
-    
-    // For now, just close the modal
-    setIsModalOpen(false);
-    setFormData({ name: '', description: '', icon: null });
+  const fetchBrands = async () => {
+    setIsLoading(true);
+    try {
+      const res = await apiFetch('/brands/');
+      if (res.success && Array.isArray(res.data)) {
+        setBrands(res.data);
+      } else if (Array.isArray(res)) {
+        setBrands(res);
+      }
+    } catch (err) {
+      console.error("Error fetching brands:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    async function fetchBrands() {
-      setIsLoading(true);
-      try {
-        const res = await apiFetch('/brands/');
-        if (res.success && Array.isArray(res.data)) {
-          setBrands(res.data);
-        } else if (Array.isArray(res)) {
-          setBrands(res);
-        }
-      } catch (err) {
-        console.error("Error fetching brands:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchBrands();
   }, []);
+
+  const handleSaveBrand = async () => {
+    if (!formData.name) return;
+
+    const payload = new FormData();
+    payload.append('name', formData.name);
+    if (formData.icon && typeof formData.icon !== 'string') {
+      payload.append('icon', formData.icon);
+    }
+
+    const endpoint = editingBrand ? `/brands/${editingBrand.slug || editingBrand.id}/` : '/brands/';
+    const method = editingBrand ? 'PATCH' : 'POST';
+
+    try {
+      const res = await apiFetch(endpoint, { method, body: payload });
+      if (res.success) {
+        Swal.fire('Success', `Brand ${editingBrand ? 'updated' : 'created'} successfully!`, 'success');
+        fetchBrands();
+      } else {
+        const errorDetails = res.errors ? '<br/><br/>' + Object.values(res.errors).flat().join('<br/>') : '';
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          html: (res.message || 'Failed to save brand') + errorDetails
+        });
+      }
+    } catch (e) {
+      Swal.fire('Error', 'An unexpected error occurred', 'error');
+    }
+    
+    setIsModalOpen(false);
+    setFormData({ name: '', icon: null });
+    setEditingBrand(null);
+  };
+
+  const handleDelete = async (slug) => {
+    if (!slug) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await apiFetch(`/brands/${slug}/`, { method: 'DELETE' });
+      if (res.success) {
+        Swal.fire('Deleted!', 'Brand has been deleted.', 'success');
+        fetchBrands();
+      } else {
+        Swal.fire('Error!', res.message || 'Failed to delete brand.', 'error');
+      }
+    } catch (e) {
+      Swal.fire('Error', 'An unexpected error occurred', 'error');
+    }
+  };
 
   const filteredBrands = brands.filter(brand => 
     (brand.name || '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -147,7 +193,10 @@ export default function BrandsPage() {
                         >
                           <Edit2 size={16} />
                         </button>
-                        <button className="hover:text-red-500 transition-colors tooltip" title="Delete">
+                        <button 
+                          onClick={() => handleDelete(brand.slug || brand.id)}
+                          className="hover:text-red-500 transition-colors tooltip" title="Delete"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -244,20 +293,6 @@ export default function BrandsPage() {
                     />
                   </div>
                 )}
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-[13px] font-bold text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea 
-                  placeholder="Brief description of the brand..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-[14px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#008F7A]/20 focus:border-[#008F7A] transition-all resize-none"
-                />
               </div>
             </div>
 

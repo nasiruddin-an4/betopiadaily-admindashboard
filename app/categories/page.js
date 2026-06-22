@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../utils/api';
-import { Search, Plus, Edit2, Trash2, Folder, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Folder, X, Upload } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
@@ -11,51 +12,89 @@ export default function CategoriesPage() {
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', description: '' });
-  const [subcategories, setSubcategories] = useState([]);
-  const [subInput, setSubInput] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [formData, setFormData] = useState({ name: '', icon: null });
+  const fileInputRef = useRef(null);
 
-  const handleAddSubcategory = () => {
-    if (subInput.trim() && !subcategories.includes(subInput.trim())) {
-      setSubcategories([...subcategories, subInput.trim()]);
-      setSubInput('');
+  const fetchCategories = async () => {
+    setIsLoading(true);
+    try {
+      const res = await apiFetch('/categories/');
+      if (res.success && Array.isArray(res.data)) {
+        setCategories(res.data);
+      } else if (Array.isArray(res)) {
+        setCategories(res);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleSaveCategory = async () => {
-    // Basic validation
-    if (!formData.name) return;
-
-    // Here you would typically send the data to the API:
-    // const payload = new FormData();
-    // payload.append('name', formData.name);
-    // await apiFetch('/categories/', { method: 'POST', body: payload });
-    
-    // For now, just close the modal
-    setIsModalOpen(false);
-    setFormData({ name: '', description: '' });
-    setSubcategories([]);
-    setSubInput('');
   };
 
   useEffect(() => {
-    async function fetchCategories() {
-      setIsLoading(true);
-      try {
-        const res = await apiFetch('/categories/');
-        if (res.success && Array.isArray(res.data)) {
-          setCategories(res.data);
-        } else if (Array.isArray(res)) {
-          setCategories(res);
-        }
-      } catch (err) {
-        console.error("Error fetching categories:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchCategories();
   }, []);
+
+  const handleSaveCategory = async () => {
+    if (!formData.name) return;
+
+    const payload = new FormData();
+    payload.append('name', formData.name);
+    if (formData.icon && typeof formData.icon !== 'string') {
+      payload.append('icon', formData.icon);
+    }
+
+    const endpoint = editingCategory ? `/categories/${editingCategory.slug || editingCategory.id}/` : '/categories/';
+    const method = editingCategory ? 'PATCH' : 'POST';
+
+    try {
+      const res = await apiFetch(endpoint, { method, body: payload });
+      if (res.success) {
+        Swal.fire('Success', `Category ${editingCategory ? 'updated' : 'created'} successfully!`, 'success');
+        fetchCategories();
+      } else {
+        const errorDetails = res.errors ? '<br/><br/>' + Object.values(res.errors).flat().join('<br/>') : '';
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          html: (res.message || 'Failed to save category') + errorDetails
+        });
+      }
+    } catch (e) {
+      Swal.fire('Error', 'An unexpected error occurred', 'error');
+    }
+    
+    setIsModalOpen(false);
+    setFormData({ name: '', icon: null });
+    setEditingCategory(null);
+  };
+
+  const handleDelete = async (slug) => {
+    if (!slug) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await apiFetch(`/categories/${slug}/`, { method: 'DELETE' });
+      if (res.success) {
+        Swal.fire('Deleted!', 'Category has been deleted.', 'success');
+        fetchCategories();
+      } else {
+        Swal.fire('Error!', res.message || 'Failed to delete category.', 'error');
+      }
+    } catch (e) {
+      Swal.fire('Error', 'An unexpected error occurred', 'error');
+    }
+  };
 
   const filteredCategories = categories.filter(cat => 
     (cat.name || '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -70,7 +109,11 @@ export default function CategoriesPage() {
           <p className="text-[13px] text-gray-500">Manage your product catalog structure</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingCategory(null);
+            setFormData({ name: '', icon: null });
+            setIsModalOpen(true);
+          }}
           className="flex items-center gap-2 px-6 py-2.5 text-[13px] font-bold bg-[#008F7A] text-white rounded-full hover:bg-[#008F7A]/90 transition-colors shrink-0"
         >
           <Plus size={16} /> Add Category
@@ -137,10 +180,20 @@ export default function CategoriesPage() {
                     </td>
                     <td className="px-8 py-4 text-right">
                       <div className="flex items-center justify-end gap-3 text-gray-400">
-                        <button className="hover:text-[#008F7A] transition-colors tooltip" title="Edit">
+                        <button 
+                          onClick={() => {
+                            setEditingCategory(category);
+                            setFormData({ name: category.name, icon: category.icon || null });
+                            setIsModalOpen(true);
+                          }}
+                          className="hover:text-[#008F7A] transition-colors tooltip" title="Edit"
+                        >
                           <Edit2 size={16} />
                         </button>
-                        <button className="hover:text-red-500 transition-colors tooltip" title="Delete">
+                        <button 
+                          onClick={() => handleDelete(category.slug || category.id)}
+                          className="hover:text-red-500 transition-colors tooltip" title="Delete"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -165,7 +218,9 @@ export default function CategoriesPage() {
           <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-[18px] font-bold text-gray-900">Add Category</h2>
+              <h2 className="text-[18px] font-bold text-gray-900">
+                {editingCategory ? 'Edit Category' : 'Add Category'}
+              </h2>
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors p-1"
@@ -190,61 +245,51 @@ export default function CategoriesPage() {
                 />
               </div>
 
-              {/* Subcategories */}
+              {/* Category Icon / Image */}
               <div>
                 <label className="block text-[13px] font-bold text-gray-700 mb-2">
-                  Subcategories
+                  Category Icon
                 </label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Type and press Enter or Add"
-                    value={subInput}
-                    onChange={(e) => setSubInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSubcategory();
-                      }
-                    }}
-                    className="flex-1 px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl text-[14px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#008F7A]/20 focus:border-[#008F7A] transition-all"
-                  />
-                  <button 
-                    onClick={handleAddSubcategory}
-                    className="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold text-[13px] rounded-xl hover:bg-gray-200 transition-colors"
+                
+                {formData.icon ? (
+                  <div className="relative w-full h-32 border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center group">
+                    <img 
+                      src={typeof formData.icon === 'string' ? formData.icon : URL.createObjectURL(formData.icon)} 
+                      alt="Preview" 
+                      className="w-auto h-full max-h-full object-contain p-2"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button 
+                        onClick={() => setFormData({...formData, icon: null})}
+                        className="px-4 py-2 bg-white text-red-500 text-[12px] font-bold rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        Remove Icon
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full px-4 py-6 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-xl text-center hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
-                    Add
-                  </button>
-                </div>
-                {subcategories.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {subcategories.map((sub, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[12px] text-gray-600">
-                        {sub}
-                        <button 
-                          onClick={() => setSubcategories(subcategories.filter((_, i) => i !== idx))}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
+                    <div className="w-10 h-10 mx-auto bg-white rounded-full flex items-center justify-center border border-gray-100 mb-2 group-hover:border-[#008F7A]/30 group-hover:text-[#008F7A] transition-all">
+                      <Upload size={18} className="text-gray-400 group-hover:text-[#008F7A]" />
+                    </div>
+                    <div className="text-[13px] font-medium text-gray-700">Click to upload image</div>
+                    <div className="text-[11px] text-gray-400 mt-1">PNG, JPG, WEBP up to 5MB</div>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      className="hidden" 
+                      accept="image/png, image/jpeg, image/webp"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setFormData({...formData, icon: e.target.files[0]});
+                        }
+                      }}
+                    />
                   </div>
                 )}
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-[13px] font-bold text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea 
-                  placeholder="Brief description of the category..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  rows={4}
-                  className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-[14px] text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#008F7A]/20 focus:border-[#008F7A] transition-all resize-none"
-                />
               </div>
             </div>
 
@@ -260,7 +305,7 @@ export default function CategoriesPage() {
                 onClick={handleSaveCategory}
                 className="px-6 py-2.5 bg-[#008F7A] text-white text-[14px] font-bold rounded-full hover:bg-[#008F7A]/90 transition-colors shadow-sm"
               >
-                Save Category
+                {editingCategory ? 'Update Category' : 'Save Category'}
               </button>
             </div>
           </div>

@@ -15,9 +15,15 @@ export async function apiFetch(endpoint, options = {}) {
     }
   }
 
-  // If the body is FormData, do not set Content-Type so the browser sets the boundary
-  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+  // Determine if body is FormData
+  const isFormData = options.body && typeof options.body.append === 'function';
+
+  // If the body is NOT FormData, set Content-Type to application/json and stringify body
+  if (!isFormData && options.body && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
+    if (typeof options.body !== 'string') {
+      options.body = JSON.stringify(options.body);
+    }
   }
 
   try {
@@ -56,9 +62,10 @@ export async function apiFetch(endpoint, options = {}) {
       errors: null,
     };
   } catch (error) {
+    console.error('apiFetch error:', error);
     return {
       success: false,
-      message: error.message,
+      message: 'Something went wrong',
       errors: null,
       data: null,
     };

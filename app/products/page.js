@@ -16,18 +16,25 @@ export default function ProductsPage() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
       const [prodRes, brandRes, catRes, tagRes] = await Promise.all([
-        apiFetch('/products/'),
+        apiFetch(`/products/?page=${currentPage}`),
         apiFetch('/brands/'),
         apiFetch('/categories/'),
         apiFetch('/tags/')
       ]);
       
-      if (prodRes.success) setProducts(prodRes.data || []);
+      if (prodRes.success) {
+        setProducts(prodRes.data || []);
+        if (prodRes.meta && prodRes.meta.pagination) {
+          setPagination(prodRes.meta.pagination);
+        }
+      }
       if (brandRes.success) setBrands(brandRes.data || []);
       if (catRes.success) setCategories(catRes.data || []);
       if (tagRes.success) setTags(tagRes.data || []);
@@ -42,7 +49,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage]);
 
   const handleDelete = async (slug) => {
     const result = await Swal.fire({
@@ -206,7 +213,42 @@ export default function ProductsPage() {
           </tbody>
         </table>
       </div>
-
+      
+      {/* Pagination UI */}
+      {pagination && pagination.total_pages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 mt-4">
+           <div className="text-[12px] text-gray-500">
+             Showing {(pagination.page - 1) * pagination.page_size + 1} to {Math.min(pagination.page * pagination.page_size, pagination.total)} of {pagination.total} entries
+           </div>
+           <div className="flex items-center gap-2">
+             <button 
+               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+               disabled={!pagination.has_previous}
+               className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+             >
+               Previous
+             </button>
+             <div className="flex items-center gap-1">
+               {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map(page => (
+                 <button
+                   key={page}
+                   onClick={() => setCurrentPage(page)}
+                   className={`w-8 h-8 flex items-center justify-center rounded-lg text-[12px] font-medium transition-colors ${currentPage === page ? 'bg-brand-bright-orange text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                 >
+                   {page}
+                 </button>
+               ))}
+             </div>
+             <button 
+               onClick={() => setCurrentPage(p => Math.min(pagination.total_pages, p + 1))}
+               disabled={!pagination.has_next}
+               className="px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] text-gray-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+             >
+               Next
+             </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
