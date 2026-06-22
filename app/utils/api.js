@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://example.com/api/v1/';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://server.betopiadaily.shop/api/v1/';
 
 /**
  * Standard fetch utility that handles JSON and FormData, and normalizes the response.
