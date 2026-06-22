@@ -27,6 +27,7 @@ export default function EditProductPage({ params }) {
     discount_amount: '0.00',
     stock_quantity: '',
     in_stock: true,
+    delivery_date: '',
     description: '',
     sku: ''
   });
@@ -59,7 +60,8 @@ export default function EditProductPage({ params }) {
             discount_amount: p.discount_amount || '0.00',
             stock_quantity: p.total_sold || 0, // Mocking stock for UI since API doesn't have raw quantity
             in_stock: p.in_stock !== false,
-            description: p.description?.replace(/<[^>]*>?/gm, '') || '', // Strip HTML for simple text area
+            delivery_date: p.delivery_date || '',
+            description: p.description || '', // Keep HTML for RichTextEditor
             sku: p.sku || ''
           });
           setStatus((p.status === false || p.status === 'false' || String(p.status).toLowerCase() === 'draft') ? 'Draft' : 'Publish');
@@ -115,9 +117,10 @@ export default function EditProductPage({ params }) {
       payload.append('price', formData.price);
       payload.append('discount_amount', formData.discount_amount);
       payload.append('in_stock', formData.in_stock);
+      if (formData.delivery_date) payload.append('delivery_date', formData.delivery_date);
       payload.append('description', formData.description);
       if (formData.sku) payload.append('sku', formData.sku);
-      
+
       const currentStatus = overrideStatus || status;
       payload.append('status', currentStatus === 'Publish' ? 'true' : 'false');
 
@@ -187,32 +190,32 @@ export default function EditProductPage({ params }) {
             <Trash2 size={18} />
           </button>
           <div className="flex relative">
-            <button 
-              type="button" 
-              onClick={() => saveProduct()} 
+            <button
+              type="button"
+              onClick={() => saveProduct()}
               className="px-4 py-2 bg-brand-bright-orange text-white text-sm font-medium rounded-l-full hover:bg-brand-bright-orange/90 transition-colors"
             >
               {status}
             </button>
-            <button 
-              type="button" 
-              onClick={() => setIsPublishDropdownOpen(!isPublishDropdownOpen)} 
+            <button
+              type="button"
+              onClick={() => setIsPublishDropdownOpen(!isPublishDropdownOpen)}
               className="px-2 py-2 bg-brand-bright-orange text-white border-l border-white/20 rounded-r-full hover:bg-brand-bright-orange/90 transition-colors"
             >
               <ChevronDown size={16} />
             </button>
-            
+
             {isPublishDropdownOpen && (
               <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-50">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => { setStatus('Publish'); setIsPublishDropdownOpen(false); saveProduct('Publish'); }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   Publish
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => { setStatus('Draft'); setIsPublishDropdownOpen(false); saveProduct('Draft'); }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
@@ -229,12 +232,12 @@ export default function EditProductPage({ params }) {
         {/* Basic Information */}
         <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-8">
           <h2 className="text-sm font-bold text-gray-900 mb-6">Basic Information</h2>
-          
+
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Product Name</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
@@ -243,8 +246,8 @@ export default function EditProductPage({ params }) {
             </div>
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Slug</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 name="slug"
                 value={formData.slug}
                 disabled
@@ -253,10 +256,10 @@ export default function EditProductPage({ params }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Category</label>
-              <Select 
+              <Select
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
@@ -265,9 +268,20 @@ export default function EditProductPage({ params }) {
               />
             </div>
             <div>
+              <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Delivery Date</label>
+              <input
+                type="text"
+                name="delivery_date"
+                placeholder="e.g. 2-3 Days, 22 June"
+                value={formData.delivery_date}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-brand-bright-orange focus:bg-white transition-all outline-none"
+              />
+            </div>
+            <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Total Sold (Read-Only)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 name="stock_quantity"
                 value={formData.stock_quantity}
                 disabled
@@ -276,7 +290,7 @@ export default function EditProductPage({ params }) {
             </div>
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Stock Status</label>
-              <Select 
+              <Select
                 name="in_stock"
                 value={formData.in_stock ? "true" : "false"}
                 onChange={(e) => setFormData(prev => ({ ...prev, in_stock: e.target.value === "true" }))}
@@ -292,8 +306,8 @@ export default function EditProductPage({ params }) {
           <div className="grid grid-cols-3 gap-6 mb-6">
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Unit Price</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 name="price"
                 value={formData.price}
                 onChange={handleInputChange}
@@ -302,8 +316,8 @@ export default function EditProductPage({ params }) {
             </div>
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Discount Amount</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 name="discount_amount"
                 value={formData.discount_amount}
                 onChange={handleInputChange}
@@ -312,8 +326,8 @@ export default function EditProductPage({ params }) {
             </div>
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Selling Price</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={(parseFloat(formData.price || 0) - parseFloat(formData.discount_amount || 0)).toFixed(2)}
                 disabled
                 className="w-full px-4 py-3 bg-gray-50/50 border-none rounded-xl text-sm text-gray-500 cursor-not-allowed outline-none"
@@ -322,7 +336,7 @@ export default function EditProductPage({ params }) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Short Description</label>
+            <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Description</label>
             <RichTextEditor
               value={formData.description}
               onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}

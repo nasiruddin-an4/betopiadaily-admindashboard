@@ -189,7 +189,7 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-5 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3 text-gray-300">
-                      <button className="hover:text-gray-600 transition-colors"><Eye size={16} /></button>
+                      <Link href={`/products/${product.slug}`} className="hover:text-gray-600 transition-colors"><Eye size={16} /></Link>
                       <Link href={`/products/${product.slug}/edit`} className="hover:text-blue-600 transition-colors"><Edit2 size={16} /></Link>
                       <button onClick={() => handleDelete(product.slug)} className="hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
                     </div>

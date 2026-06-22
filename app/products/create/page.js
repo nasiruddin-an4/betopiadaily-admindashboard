@@ -25,6 +25,7 @@ export default function CreateProductPage() {
     discount_amount: '0.00',
     stock_quantity: '',
     in_stock: true,
+    delivery_date: '',
     description: '',
     sku: ''
   });
@@ -86,6 +87,7 @@ export default function CreateProductPage() {
       payload.append('price', formData.price);
       payload.append('discount_amount', formData.discount_amount);
       payload.append('in_stock', formData.in_stock);
+      if (formData.delivery_date) payload.append('delivery_date', formData.delivery_date);
       payload.append('description', formData.description);
       if (formData.sku) payload.append('sku', formData.sku);
       
@@ -223,7 +225,7 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Category</label>
               <Select 
@@ -232,6 +234,17 @@ export default function CreateProductPage() {
                 onChange={handleInputChange}
                 options={categories.map(cat => ({ label: cat.name, value: cat.id }))}
                 placeholder="Select Category"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Delivery Date</label>
+              <input 
+                type="text" 
+                name="delivery_date"
+                placeholder="e.g. 2-3 Days, 22 June"
+                value={formData.delivery_date}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-brand-bright-orange focus:bg-white transition-all outline-none"
               />
             </div>
             <div>

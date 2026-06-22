@@ -9,6 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.14.0",
+    "@azure/msal-react": "^5.4.5",
+    "html-to-image": "^1.11.13",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.20.0",
     "next": "16.2.9",
     "react": "19.2.4",

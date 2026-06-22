@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { DashboardLayout } from "./components/DashboardLayout";
+import { MsalProviderWrapper } from "./components/MsalProviderWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,9 +25,11 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-gray-50 text-gray-900">
-        <DashboardLayout>
-          {children}
-        </DashboardLayout>
+        <MsalProviderWrapper>
+          <DashboardLayout>
+            {children}
+          </DashboardLayout>
+        </MsalProviderWrapper>
       </body>
     </html>
   );
