@@ -25,6 +25,24 @@ export default function LoginPage() {
 
       // Use mock credentials from .env if available
       if (process.env.NEXT_PUBLIC_MOCK_SSO_TOKEN && process.env.NEXT_PUBLIC_MOCK_SSO_USER) {
+        try {
+          const mockUser = JSON.parse(process.env.NEXT_PUBLIC_MOCK_SSO_USER);
+          if (mockUser?.role && mockUser.role.toLowerCase() === 'user') {
+            await Swal.fire({
+              title: 'Redirecting...',
+              text: 'You are being redirected to the user portal.',
+              icon: 'info',
+              timer: 1500,
+              showConfirmButton: false
+            });
+            window.location.href = 'https://betopiadaily.shop/';
+            setIsLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to parse mock user', err);
+        }
+
         localStorage.setItem('token', process.env.NEXT_PUBLIC_MOCK_SSO_TOKEN);
         localStorage.setItem('user', process.env.NEXT_PUBLIC_MOCK_SSO_USER);
         
