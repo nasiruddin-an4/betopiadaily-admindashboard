@@ -44,9 +44,13 @@ export function MsalProviderWrapper({ children }) {
 
               if (role && role.toLowerCase() === 'user') {
                 Swal.fire({
-                  title: 'Access Denied',
-                  text: "You haven't permission to login to the Admin Dashboard.",
-                  icon: 'error'
+                  title: 'Redirecting...',
+                  text: "You are being redirected to the user portal.",
+                  icon: 'info',
+                  timer: 1500,
+                  showConfirmButton: false
+                }).then(() => {
+                  window.location.href = 'https://betopiadaily.shop/';
                 });
                 return;
               }
