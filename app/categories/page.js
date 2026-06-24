@@ -43,10 +43,12 @@ export default function CategoriesPage() {
     payload.append('name', formData.name);
     if (formData.icon && typeof formData.icon !== 'string') {
       payload.append('icon', formData.icon);
+      payload.append('image', formData.icon);
+      payload.append('logo', formData.icon);
     }
 
     const endpoint = editingCategory ? `/categories/${editingCategory.slug || editingCategory.id}/` : '/categories/';
-    const method = editingCategory ? 'PATCH' : 'POST';
+    const method = editingCategory ? 'PUT' : 'POST';
 
     try {
       const res = await apiFetch(endpoint, { method, body: payload });

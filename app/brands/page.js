@@ -58,10 +58,12 @@ export default function BrandsPage() {
     payload.append('name', formData.name);
     if (formData.icon && typeof formData.icon !== 'string') {
       payload.append('icon', formData.icon);
+      payload.append('image', formData.icon);
+      payload.append('logo', formData.icon);
     }
 
     const endpoint = editingBrand ? `/brands/${editingBrand.slug || editingBrand.id}/` : '/brands/';
-    const method = editingBrand ? 'PATCH' : 'POST';
+    const method = editingBrand ? 'PUT' : 'POST';
 
     try {
       const res = await apiFetch(endpoint, { method, body: payload });
