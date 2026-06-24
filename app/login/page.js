@@ -24,10 +24,22 @@ export default function LoginPage() {
       setError('');
 
       // Use mock credentials from .env if available
-      if (process.env.NEXT_PUBLIC_MOCK_SSO_TOKEN && process.env.NEXT_PUBLIC_MOCK_SSO_USER) {
+      if (process.env.NEXT_PUBLIC_MOCK_SSO_TOKEN) {
         try {
-          const mockUser = JSON.parse(process.env.NEXT_PUBLIC_MOCK_SSO_USER);
-          if (mockUser?.role && mockUser.role.toLowerCase() === 'user') {
+          const token = process.env.NEXT_PUBLIC_MOCK_SSO_TOKEN;
+          const profileRes = await fetch(process.env.NEXT_PUBLIC_API_URL + 'profile/', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            }
+          });
+          
+          const profileResponse = await profileRes.json();
+          const user = profileResponse?.data || profileResponse;
+          const role = user?.role || user?.user_role || user?.user_type;
+
+          if (role && role.toLowerCase() === 'user') {
             await Swal.fire({
               title: 'Redirecting...',
               text: 'You are being redirected to the user portal.',
@@ -39,23 +51,28 @@ export default function LoginPage() {
             setIsLoading(false);
             return;
           }
-        } catch (err) {
-          console.error('Failed to parse mock user', err);
-        }
 
-        localStorage.setItem('token', process.env.NEXT_PUBLIC_MOCK_SSO_TOKEN);
-        localStorage.setItem('user', process.env.NEXT_PUBLIC_MOCK_SSO_USER);
-        
-        await Swal.fire({
-          title: 'Success!',
-          text: 'Mock SSO Login successful',
-          icon: 'success',
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        
-        router.push('/');
-        return;
+          localStorage.setItem('token', token);
+          if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+          }
+          
+          await Swal.fire({
+            title: 'Success!',
+            text: 'Mock SSO Login successful',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false,
+          });
+          
+          router.push('/');
+          return;
+        } catch (err) {
+          console.error('Profile Fetch Error:', err);
+          setError('Failed to retrieve user profile.');
+          setIsLoading(false);
+          return;
+        }
       }
 
       await instance.loginRedirect(loginRequest);
