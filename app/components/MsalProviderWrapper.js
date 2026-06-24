@@ -39,35 +39,54 @@ export function MsalProviderWrapper({ children }) {
             const responseData = data?.data || data;
             const token = responseData?.accessToken || responseData?.access_token || responseData?.token || null;
             if (token) {
-              const user = responseData?.user || responseData?.result || responseData;
-              const role = user?.role || user?.user_role || user?.user_type;
+              // Fetch user profile to check role
+              fetch(process.env.NEXT_PUBLIC_API_URL + 'profile/', {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json'
+                }
+              })
+              .then(profileRes => profileRes.json())
+              .then(profileResponse => {
+                const user = profileResponse?.data || profileResponse;
+                const role = user?.role || user?.user_role || user?.user_type;
 
-              if (role && role.toLowerCase() === 'user') {
+                if (role && role.toLowerCase() === 'user') {
+                  Swal.fire({
+                    title: 'Redirecting...',
+                    text: "You are being redirected to the user portal.",
+                    icon: 'info',
+                    timer: 1500,
+                    showConfirmButton: false
+                  }).then(() => {
+                    window.location.href = 'https://betopiadaily.shop/';
+                  });
+                  return;
+                }
+
+                localStorage.setItem('token', token);
+                if (user) {
+                  localStorage.setItem('user', JSON.stringify(user));
+                }
+
                 Swal.fire({
-                  title: 'Redirecting...',
-                  text: "You are being redirected to the user portal.",
-                  icon: 'info',
+                  title: 'Success!',
+                  text: 'SSO Login successful',
+                  icon: 'success',
                   timer: 1500,
-                  showConfirmButton: false
+                  showConfirmButton: false,
                 }).then(() => {
-                  window.location.href = 'https://betopiadaily.shop/';
+                  router.push('/');
                 });
-                return;
-              }
-
-              localStorage.setItem('token', token);
-              if (user) {
-                localStorage.setItem('user', JSON.stringify(user));
-              }
-
-              Swal.fire({
-                title: 'Success!',
-                text: 'SSO Login successful',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false,
-              }).then(() => {
-                router.push('/');
+              })
+              .catch(err => {
+                console.error("Profile Fetch Error:", err);
+                Swal.fire({
+                  title: 'Error',
+                  text: 'Failed to retrieve user profile.',
+                  icon: 'error',
+                });
               });
             } else {
               Swal.fire({
