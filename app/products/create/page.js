@@ -16,11 +16,14 @@ export default function CreateProductPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     category: '',
+    brand: '',
+    unit: '',
     price: '',
     discount_amount: '0.00',
     stock_quantity: '',
@@ -39,9 +42,15 @@ export default function CreateProductPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const catRes = await apiFetch('/categories/');
+        const [catRes, brandRes] = await Promise.all([
+          apiFetch('/categories/'),
+          apiFetch('/brands/')
+        ]);
         if (catRes.success) {
           setCategories(catRes.data || []);
+        }
+        if (brandRes.success) {
+          setBrands(brandRes.data || []);
         }
       } catch (err) {
         console.error(err);
@@ -51,6 +60,17 @@ export default function CreateProductPage() {
     }
     fetchData();
   }, []);
+
+  const handleImageChange = (e) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setImages(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  const removeImage = (indexToRemove) => {
+    setImages(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -84,6 +104,8 @@ export default function CreateProductPage() {
       payload.append('name', formData.name);
       payload.append('slug', formData.slug);
       if (formData.category) payload.append('category', formData.category);
+      if (formData.brand) payload.append('brand', formData.brand);
+      if (formData.unit) payload.append('unit', formData.unit);
       payload.append('price', formData.price);
       payload.append('discount_amount', formData.discount_amount);
       payload.append('in_stock', formData.in_stock);
@@ -94,7 +116,14 @@ export default function CreateProductPage() {
       const currentStatus = overrideStatus || status;
       payload.append('status', currentStatus === 'Publish' ? 'true' : 'false');
 
-      // In a real scenario, map tags and upload image binaries here too.
+      // Map tags and upload images
+      if (tags.length > 0) {
+        payload.append('tags', JSON.stringify(tags));
+      }
+      
+      images.forEach((image) => {
+        payload.append('images', image);
+      });
 
       const res = await apiFetch(`/products/`, {
         method: 'POST',
@@ -225,7 +254,7 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
             <div>
               <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Category</label>
               <Select 
@@ -234,6 +263,40 @@ export default function CreateProductPage() {
                 onChange={handleInputChange}
                 options={categories.map(cat => ({ label: cat.name, value: cat.id }))}
                 placeholder="Select Category"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Brand</label>
+              <Select 
+                name="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+                options={brands.map(b => ({ label: b.name, value: b.id }))}
+                placeholder="Select Brand"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Unit</label>
+              <input 
+                type="text" 
+                name="unit"
+                placeholder="e.g. 1 kg, 500g, 1 piece"
+                value={formData.unit}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-brand-bright-orange focus:bg-white transition-all outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Stock Status</label>
+              <Select 
+                name="in_stock"
+                value={formData.in_stock ? "true" : "false"}
+                onChange={(e) => setFormData(prev => ({ ...prev, in_stock: e.target.value === "true" }))}
+                options={[
+                  { label: "In stock", value: "true" },
+                  { label: "Out of stock", value: "false" }
+                ]}
+                placeholder="Select Status"
               />
             </div>
             <div>
@@ -255,19 +318,6 @@ export default function CreateProductPage() {
                 value="0"
                 disabled
                 className="w-full px-4 py-3 bg-gray-50/50 border-none rounded-xl text-sm text-gray-500 cursor-not-allowed outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Stock Status</label>
-              <Select 
-                name="in_stock"
-                value={formData.in_stock ? "true" : "false"}
-                onChange={(e) => setFormData(prev => ({ ...prev, in_stock: e.target.value === "true" }))}
-                options={[
-                  { label: "In stock", value: "true" },
-                  { label: "Out of stock", value: "false" }
-                ]}
-                placeholder="Select Status"
               />
             </div>
           </div>
@@ -320,10 +370,29 @@ export default function CreateProductPage() {
           <label className="block text-[11px] font-bold text-gray-900 mb-4">Product Images</label>
           
           <div className="flex flex-wrap gap-4">
-            <button type="button" className="w-28 h-28 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:border-brand-bright-orange hover:text-brand-bright-orange transition-colors bg-gray-50">
+            {images.map((img, idx) => (
+              <div key={idx} className="relative w-28 h-28 rounded-xl overflow-hidden border border-gray-200">
+                <img src={URL.createObjectURL(img)} alt={`upload-${idx}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            <label className="w-28 h-28 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:border-brand-bright-orange hover:text-brand-bright-orange transition-colors bg-gray-50 cursor-pointer">
               <Upload size={20} className="mb-2" />
               <span className="text-xs font-medium">Add Image</span>
-            </button>
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*" 
+                onChange={handleImageChange} 
+                className="hidden" 
+              />
+            </label>
           </div>
         </div>
 
