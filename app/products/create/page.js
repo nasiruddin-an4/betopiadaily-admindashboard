@@ -17,6 +17,7 @@ export default function CreateProductPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -30,11 +31,15 @@ export default function CreateProductPage() {
     in_stock: true,
     delivery_date: '',
     description: '',
-    sku: ''
+    sku: '',
+    key_detail_title: '',
+    key_detail_description: '',
+    is_hot_deal: false,
+    hot_deal_start: '',
+    hot_deal_end: ''
   });
 
-  const [tags, setTags] = useState([]);
-  const [tagInput, setTagInput] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [images, setImages] = useState([]);
   const [status, setStatus] = useState('Publish');
   const [isPublishDropdownOpen, setIsPublishDropdownOpen] = useState(false);
@@ -42,15 +47,19 @@ export default function CreateProductPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [catRes, brandRes] = await Promise.all([
+        const [catRes, brandRes, tagRes] = await Promise.all([
           apiFetch('/categories/'),
-          apiFetch('/brands/')
+          apiFetch('/brands/'),
+          apiFetch('/tags/')
         ]);
         if (catRes.success) {
           setCategories(catRes.data || []);
         }
         if (brandRes.success) {
           setBrands(brandRes.data || []);
+        }
+        if (tagRes.success) {
+          setAvailableTags(tagRes.data || []);
         }
       } catch (err) {
         console.error(err);
@@ -83,18 +92,8 @@ export default function CreateProductPage() {
     });
   };
 
-  const handleTagKeyDown = (e) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      if (!tags.includes(tagInput.trim())) {
-        setTags([...tags, tagInput.trim()]);
-      }
-      setTagInput('');
-    }
-  };
-
-  const removeTag = (tagToRemove) => {
-    setTags(tags.filter(t => t !== tagToRemove));
+  const removeTag = (idToRemove) => {
+    setSelectedTagIds(selectedTagIds.filter(id => id !== idToRemove));
   };
 
   const saveProduct = async (overrideStatus = null) => {
@@ -112,14 +111,19 @@ export default function CreateProductPage() {
       if (formData.delivery_date) payload.append('delivery_date', formData.delivery_date);
       payload.append('description', formData.description);
       if (formData.sku) payload.append('sku', formData.sku);
+      if (formData.key_detail_title) payload.append('key_detail_title', formData.key_detail_title);
+      if (formData.key_detail_description) payload.append('key_detail_description', formData.key_detail_description);
+      payload.append('is_hot_deal', formData.is_hot_deal ? 'true' : 'false');
+      if (formData.hot_deal_start) payload.append('hot_deal_start', formData.hot_deal_start);
+      if (formData.hot_deal_end) payload.append('hot_deal_end', formData.hot_deal_end);
       
       const currentStatus = overrideStatus || status;
       payload.append('status', currentStatus === 'Publish' ? 'true' : 'false');
 
       // Map tags and upload images
-      if (tags.length > 0) {
-        payload.append('tags', JSON.stringify(tags));
-      }
+      selectedTagIds.forEach(id => {
+        payload.append('tag_ids', id);
+      });
       
       images.forEach((image) => {
         payload.append('images', image);
@@ -362,6 +366,70 @@ export default function CreateProductPage() {
               placeholder="Write a detailed product description..."
             />
           </div>
+
+          {/* Additional Fields Block */}
+          <div className="mt-6 border-t border-gray-100 pt-6">
+            <h3 className="text-sm font-bold text-gray-900 mb-4">Key Details</h3>
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Key Detail Title</label>
+                <input 
+                  type="text" 
+                  name="key_detail_title"
+                  value={formData.key_detail_title}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-brand-bright-orange focus:bg-white transition-all outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Key Detail Description</label>
+                <input 
+                  type="text" 
+                  name="key_detail_description"
+                  value={formData.key_detail_description}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-brand-bright-orange focus:bg-white transition-all outline-none"
+                />
+              </div>
+            </div>
+
+            <h3 className="text-sm font-bold text-gray-900 mb-4">Hot Deal Settings</h3>
+            <div className="grid grid-cols-3 gap-6">
+              <div>
+                <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Is Hot Deal?</label>
+                <Select 
+                  name="is_hot_deal"
+                  value={formData.is_hot_deal ? "true" : "false"}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_hot_deal: e.target.value === "true" }))}
+                  options={[
+                    { label: "Yes", value: "true" },
+                    { label: "No", value: "false" }
+                  ]}
+                  placeholder="Select"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Hot Deal Start</label>
+                <input 
+                  type="datetime-local" 
+                  name="hot_deal_start"
+                  value={formData.hot_deal_start}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-brand-bright-orange focus:bg-white transition-all outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-brand-bright-orange uppercase tracking-wider mb-2">Hot Deal End</label>
+                <input 
+                  type="datetime-local" 
+                  name="hot_deal_end"
+                  value={formData.hot_deal_end}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-brand-bright-orange focus:bg-white transition-all outline-none"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Media */}
@@ -400,25 +468,35 @@ export default function CreateProductPage() {
         <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-8">
           <h2 className="text-sm font-bold text-gray-900 mb-6">Tags</h2>
           
-          <input 
-            type="text" 
-            placeholder="Type a tag and press Enter"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={handleTagKeyDown}
+          <select 
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val && !selectedTagIds.includes(val)) {
+                setSelectedTagIds([...selectedTagIds, val]);
+              }
+              e.target.value = ''; // reset selection
+            }}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 focus:border-brand-bright-orange focus:ring-1 focus:ring-brand-bright-orange transition-all outline-none mb-4"
-          />
+          >
+            <option value="">Select a tag...</option>
+            {availableTags.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
           
-          {tags.length > 0 && (
+          {selectedTagIds.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag, idx) => (
-                <span key={idx} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700">
-                  {tag}
-                  <button type="button" onClick={() => removeTag(tag)} className="text-gray-400 hover:text-gray-600">
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
+              {selectedTagIds.map((tagId) => {
+                const tagObj = availableTags.find(t => t.id === tagId);
+                return (
+                  <span key={tagId} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-700">
+                    {tagObj ? tagObj.name : tagId}
+                    <button type="button" onClick={() => removeTag(tagId)} className="text-gray-400 hover:text-gray-600">
+                      <X size={12} />
+                    </button>
+                  </span>
+                )
+              })}
             </div>
           )}
         </div>
